@@ -1,0 +1,109 @@
+<!doctype html>
+<!--
+  Minimal static page served from the S3 + CloudFront stack defined in
+  template.yaml. Kept intentionally small: the assignment is about the
+  cloud setup, not the front-end.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hello from the cloud</title>
+  <style>
+    :root {
+      --ink:  #1f2937;
+      --sub:  #5e6b78;
+      --accent: #0b6e6e;
+      --soft: #f2f6f6;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+                   "Liberation Sans", Arial, sans-serif;
+      color: var(--ink);
+      background: #ffffff;
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 2rem;
+    }
+    main {
+      max-width: 640px;
+      width: 100%;
+      text-align: center;
+    }
+    .tag {
+      display: inline-block;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      color: var(--accent);
+      background: var(--soft);
+      padding: 0.35rem 0.7rem;
+      border-radius: 999px;
+      text-transform: uppercase;
+    }
+    h1 {
+      font-size: 2.3rem;
+      margin: 1.2rem 0 0.4rem;
+      letter-spacing: -0.01em;
+    }
+    p.lead {
+      color: var(--sub);
+      font-size: 1.05rem;
+      line-height: 1.55;
+      margin: 0 auto 1.4rem;
+      max-width: 520px;
+    }
+    .stack {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      justify-content: center;
+      margin-top: 1.2rem;
+    }
+    .pill {
+      font-size: 0.85rem;
+      color: var(--ink);
+      background: var(--soft);
+      border: 1px solid #cfdfdf;
+      padding: 0.3rem 0.7rem;
+      border-radius: 999px;
+    }
+    footer {
+      margin-top: 2rem;
+      font-size: 0.8rem;
+      color: var(--sub);
+    }
+    code {
+      font-family: ui-monospace, "Liberation Mono", Consolas, monospace;
+      font-size: 0.88em;
+      color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <span class="tag">Cloud Programming · Phase 2 demo</span>
+    <h1>Hello from the edge.</h1>
+    <p class="lead">
+      This page lives in an S3 bucket and is served to you from the
+      nearest CloudFront edge location. No servers were configured to
+      bring it to your browser &mdash; the whole stack is defined in
+      <code>template.yaml</code>.
+    </p>
+    <div class="stack" aria-label="Stack">
+      <span class="pill">S3</span>
+      <span class="pill">CloudFront</span>
+      <span class="pill">Route&nbsp;53</span>
+      <span class="pill">ACM</span>
+      <span class="pill">CloudWatch</span>
+      <span class="pill">CloudFormation</span>
+    </div>
+    <footer>
+      Coursework for the IU AI bachelor &middot; DLBSEPCP01_E
+    </footer>
+  </main>
+</body>
+</html>
