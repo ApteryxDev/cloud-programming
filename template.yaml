@@ -1,90 +1,37 @@
-# =============================================================================
-# template.yaml
+# CloudFormation for the Phase 2 portfolio (DLBSEPCP01_E).
+# Deploys S3 + CloudFront for a static site, with an alarm on 5xx errors.
 #
-# AWS CloudFormation template for a globally-available static website.
+# deploy:
+#   aws cloudformation deploy --template-file template.yaml \
+#       --stack-name cloud-programming-site \
+#       --parameter-overrides BucketName=<unique-name>
 #
-# What this deploys:
-#   - An S3 bucket that holds the site files (index.html, etc.)
-#   - A CloudFront distribution in front of the bucket, with HTTPS, caching
-#     and a global edge network for low latency
-#   - An Origin Access Control (OAC) so that the bucket is *only* readable
-#     through CloudFront, never directly from the public internet
-#   - A bucket policy that grants CloudFront the permission to read objects
-#   - CloudWatch alarms on the CloudFront 4xx and 5xx error rates so we
-#     notice if the site starts misbehaving
-#
-# Why this design:
-#   - S3 stores each object across multiple availability zones, so there is
-#     no single machine that can take the site offline.
-#   - CloudFront copies cached content to roughly 400 edge locations
-#     worldwide, so visitors are served from a nearby cache and do not
-#     pay the latency cost of reaching the origin region.
-#   - There is no compute tier (no EC2, no ASG). Static content scales at
-#     the platform level: S3 and CloudFront absorb traffic spikes on their
-#     own. If a dynamic backend is added later, it would go behind a
-#     CloudFront behaviour like /api/* on top of this same distribution.
-#   - OAC is the current AWS-recommended way to lock the origin bucket
-#     down. It replaces the older Origin Access Identity pattern.
-#
-# How to deploy:
-#   aws cloudformation deploy \
-#       --template-file template.yaml \
-#       --stack-name aws-static-site \
-#       --parameter-overrides BucketName=my-static-site-1234
-#
-# After the stack is created, upload an index.html to the bucket:
-#   aws s3 cp index.html s3://<BucketName>/index.html
-#
-# References:
-#   - CloudFront distributions:
-#     https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-cloudfront-distribution.html
-#   - S3 buckets:
-#     https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-s3-bucket.html
-#   - Origin Access Control:
-#     https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-restricting-access-to-s3.html
-#   - CloudWatch alarms:
-#     https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-cw-alarm.html
-# =============================================================================
+# then upload the page:
+#   aws s3 cp index.html s3://<unique-name>/index.html
 
 AWSTemplateFormatVersion: "2010-09-09"
-Description: >
-  Static website hosted on S3 and served globally through CloudFront,
-  with an Origin Access Control so the bucket is private and CloudWatch
-  alarms on 4xx/5xx error rates.
+Description: Static site on S3 + CloudFront for the Cloud Programming portfolio.
 
-# -----------------------------------------------------------------------------
-# Parameters — the few things a user is likely to change between deployments
-# -----------------------------------------------------------------------------
 Parameters:
 
   BucketName:
     Type: String
-    Description: Globally unique name for the S3 bucket that stores the site.
+    Description: bucket name (has to be globally unique)
     AllowedPattern: "^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$"
-    ConstraintDescription: >
-      Must be 3-63 chars, lowercase letters, digits, dots and hyphens.
 
   DefaultRootObject:
     Type: String
     Default: index.html
-    Description: File CloudFront returns for requests to the root URL.
 
   ErrorRateThreshold:
     Type: Number
     Default: 5
-    Description: CloudWatch alarm threshold for 5xx error rate (percent).
+    Description: alarm fires when 5xx rate goes above this (percent)
 
 
-# -----------------------------------------------------------------------------
-# Resources
-# -----------------------------------------------------------------------------
 Resources:
 
-  # ---------------------------------------------------------------------------
-  # S3 bucket: holds the site files (index.html, css, images, etc.).
-  # Public access is blocked because the only thing allowed to read from
-  # this bucket is CloudFront, via the OAC defined below.
-  # ---------------------------------------------------------------------------
+  # the bucket where index.html lives
   SiteBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -92,6 +39,7 @@ Resources:
       OwnershipControls:
         Rules:
           - ObjectOwnership: BucketOwnerEnforced
+      # no public access - cloudfront reads it through the OAC below
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true
@@ -100,11 +48,8 @@ Resources:
       VersioningConfiguration:
         Status: Enabled
 
-  # ---------------------------------------------------------------------------
-  # Origin Access Control (OAC): the modern AWS-recommended way to let
-  # CloudFront read from a private S3 bucket. It signs requests so that
-  # only this CloudFront distribution can fetch objects from the bucket.
-  # ---------------------------------------------------------------------------
+  # OAC = origin access control. lets cloudfront read from the private bucket.
+  # this replaces the older "origin access identity" thing in AWS docs.
   SiteOAC:
     Type: AWS::CloudFront::OriginAccessControl
     Properties:
@@ -115,11 +60,6 @@ Resources:
         SigningBehavior: always
         SigningProtocol: sigv4
 
-  # ---------------------------------------------------------------------------
-  # CloudFront distribution: the global front door. It caches content at
-  # ~400 edge locations worldwide, terminates HTTPS, and forwards requests
-  # to the S3 origin when there is a cache miss.
-  # ---------------------------------------------------------------------------
   SiteDistribution:
     Type: AWS::CloudFront::Distribution
     Properties:
@@ -129,24 +69,22 @@ Resources:
         DefaultRootObject: !Ref DefaultRootObject
         HttpVersion: http2
         IPV6Enabled: true
-        PriceClass: PriceClass_100   # US + Europe edges; cheapest tier
+        PriceClass: PriceClass_100  # cheapest tier (US + Europe edges only)
         Origins:
           - Id: S3Origin
             DomainName: !GetAtt SiteBucket.RegionalDomainName
             S3OriginConfig:
-              OriginAccessIdentity: ""     # left empty; OAC replaces it
+              OriginAccessIdentity: ""  # has to be empty string when using OAC
             OriginAccessControlId: !GetAtt SiteOAC.Id
         DefaultCacheBehavior:
           TargetOriginId: S3Origin
-          ViewerProtocolPolicy: redirect-to-https   # HTTPS everywhere
+          ViewerProtocolPolicy: redirect-to-https
           AllowedMethods: [GET, HEAD]
           CachedMethods: [GET, HEAD]
           Compress: true
-          # AWS-managed "CachingOptimized" cache policy. Good default for
-          # static content; we are not inventing our own cache rules yet.
+          # this UUID is the managed "CachingOptimized" policy from AWS docs
           CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
-        # Friendly handling for client navigation: SPAs and direct deep
-        # links return index.html for missing files instead of an XML error.
+        # if the bucket returns 403/404 just serve index.html anyway
         CustomErrorResponses:
           - ErrorCode: 403
             ResponsePagePath: /index.html
@@ -157,14 +95,10 @@ Resources:
             ResponseCode: 200
             ErrorCachingMinTTL: 60
         ViewerCertificate:
-          CloudFrontDefaultCertificate: true        # *.cloudfront.net cert
+          CloudFrontDefaultCertificate: true
           MinimumProtocolVersion: TLSv1.2_2021
 
-  # ---------------------------------------------------------------------------
-  # Bucket policy: grants the CloudFront distribution (via the OAC) the
-  # right to read objects from the bucket. Without this policy, CloudFront
-  # would still be blocked even though the OAC exists.
-  # ---------------------------------------------------------------------------
+  # without this policy the OAC alone is not enough, cloudfront still gets 403
   SiteBucketPolicy:
     Type: AWS::S3::BucketPolicy
     Properties:
@@ -182,17 +116,12 @@ Resources:
                 AWS:SourceArn: !Sub >-
                   arn:aws:cloudfront::${AWS::AccountId}:distribution/${SiteDistribution}
 
-  # ---------------------------------------------------------------------------
-  # CloudWatch alarm on the 5xx error rate. If too many requests start
-  # failing server-side, the alarm fires so we can investigate.
-  # ---------------------------------------------------------------------------
+  # simple alarm - mostly here so monitoring is not completely empty
   HighErrorRateAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmName: !Sub "${AWS::StackName}-5xx-error-rate"
-      AlarmDescription: >
-        Fires when CloudFront's 5xx error rate exceeds the threshold over
-        a 5-minute window.
+      AlarmDescription: fires if 5xx error rate goes above threshold for 5 min
       Namespace: AWS/CloudFront
       MetricName: 5xxErrorRate
       Dimensions:
@@ -208,19 +137,16 @@ Resources:
       TreatMissingData: notBreaching
 
 
-# -----------------------------------------------------------------------------
-# Outputs — handy values you'd want after the stack is created
-# -----------------------------------------------------------------------------
 Outputs:
 
   SiteBucketName:
-    Description: Upload site files to this bucket.
+    Description: upload site files here
     Value: !Ref SiteBucket
 
   DistributionId:
-    Description: CloudFront distribution ID (for cache invalidations).
+    Description: cloudfront distribution id
     Value: !Ref SiteDistribution
 
   SiteURL:
-    Description: Public URL of the site.
+    Description: public URL of the site
     Value: !Sub "https://${SiteDistribution.DomainName}"
