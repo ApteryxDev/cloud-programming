@@ -1,6 +1,7 @@
 # cloud-programming — AWS static site
 
-Portfolio submission for IU course **Cloud Programming (DLBSEPCP01_E)**.
+Portfolio submission for IU course **Cloud Programming (DLBSEPCP01_E)**. For Alp Ege Yalcin student n°42308653
+
 
 This repository contains the Infrastructure as Code and the sample web
 page for **Phase 2** of the portfolio: a globally available static
@@ -32,10 +33,6 @@ When you deploy the template, AWS creates:
 - A **CloudWatch alarm** that fires if the CloudFront 5xx error rate
   exceeds the configured threshold.
 
-There is intentionally no EC2 or Auto Scaling Group. For static
-content, S3 and CloudFront already scale automatically at the platform
-level. A dynamic backend can be added later as a CloudFront behaviour
-(for example `/api/*` pointing to an ALB).
 
 ## Architecture
 
@@ -90,7 +87,7 @@ aws cloudformation delete-stack --stack-name cloud-programming-site
 
 ## Course context
 
-Author: Alp (placeholder name)
-Course: DLBSEPCP01_E – Cloud Programming
+Author: Alp Ege Yalcin
+Course: DLBSEPCP01_E – Cloud Programming Matriculation n°42308653
 Institution: IU International University of Applied Sciences
-# cloud-programming-
+# cloud-programming
