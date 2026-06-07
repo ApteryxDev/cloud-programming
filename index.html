@@ -1,109 +1,57 @@
 <!doctype html>
-<!--
-  Minimal static page served from the S3 + CloudFront stack defined in
-  template.yaml. Kept intentionally small: the assignment is about the
-  cloud setup, not the front-end.
--->
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Hello from the cloud</title>
+  <title>Available, fast, scalable.</title>
   <style>
-    :root {
-      --ink:  #1f2937;
-      --sub:  #5e6b78;
-      --accent: #0b6e6e;
-      --soft: #f2f6f6;
-    }
-    * { box-sizing: border-box; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
-                   "Liberation Sans", Arial, sans-serif;
-      color: var(--ink);
-      background: #ffffff;
-      margin: 0;
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      padding: 2rem;
-    }
-    main {
+                   Arial, sans-serif;
       max-width: 640px;
-      width: 100%;
-      text-align: center;
+      margin: 4rem auto;
+      padding: 0 1.5rem;
+      color: #1f2937;
+      line-height: 1.6;
     }
-    .tag {
-      display: inline-block;
-      font-size: 0.78rem;
-      font-weight: 600;
-      letter-spacing: 0.12em;
-      color: var(--accent);
-      background: var(--soft);
-      padding: 0.35rem 0.7rem;
-      border-radius: 999px;
-      text-transform: uppercase;
-    }
-    h1 {
-      font-size: 2.3rem;
-      margin: 1.2rem 0 0.4rem;
-      letter-spacing: -0.01em;
-    }
-    p.lead {
-      color: var(--sub);
-      font-size: 1.05rem;
-      line-height: 1.55;
-      margin: 0 auto 1.4rem;
-      max-width: 520px;
-    }
-    .stack {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      justify-content: center;
-      margin-top: 1.2rem;
-    }
-    .pill {
-      font-size: 0.85rem;
-      color: var(--ink);
-      background: var(--soft);
-      border: 1px solid #cfdfdf;
-      padding: 0.3rem 0.7rem;
-      border-radius: 999px;
-    }
-    footer {
-      margin-top: 2rem;
-      font-size: 0.8rem;
-      color: var(--sub);
-    }
-    code {
-      font-family: ui-monospace, "Liberation Mono", Consolas, monospace;
-      font-size: 0.88em;
-      color: var(--accent);
-    }
+    h1 { font-size: 2rem; margin-bottom: 0.4rem; }
+    h2 { font-size: 1.1rem; color: #0b6e6e; margin-top: 1.6rem;
+         margin-bottom: 0.2rem; }
+    p  { margin: 0.3rem 0; }
+    .lead { color: #5e6b78; margin-bottom: 1.5rem; }
+    footer { margin-top: 3rem; font-size: 0.85rem; color: #5e6b78; }
   </style>
 </head>
 <body>
-  <main>
-    <span class="tag">Cloud Programming · Phase 2 demo</span>
-    <h1>Hello from the edge.</h1>
-    <p class="lead">
-      This page lives in an S3 bucket and is served to you from the
-      nearest CloudFront edge location. No servers were configured to
-      bring it to your browser &mdash; the whole stack is defined in
-      <code>template.yaml</code>.
-    </p>
-    <div class="stack" aria-label="Stack">
-      <span class="pill">S3</span>
-      <span class="pill">CloudFront</span>
-      <span class="pill">Route&nbsp;53</span>
-      <span class="pill">ACM</span>
-      <span class="pill">CloudWatch</span>
-      <span class="pill">CloudFormation</span>
-    </div>
-    <footer>
-      Coursework for the IU AI bachelor &middot; DLBSEPCP01_E
-    </footer>
-  </main>
+  <h1>Available, fast, scalable.</h1>
+  <p class="lead">
+    This page is served from AWS by S3 and CloudFront. It is designed
+    around three properties the assignment asks for.
+  </p>
+
+  <h2>Highly available</h2>
+  <p>
+    The files live in S3, which stores copies across several data centres.
+    CloudFront sits in front of that, spread across many edge locations,
+    so there is no single machine whose failure can take the site down.
+  </p>
+
+  <h2>Low latency, anywhere</h2>
+  <p>
+    CloudFront caches this page at edge locations around the world. Your
+    request was answered by whichever one is closest to you, not by a
+    single server in one country.
+  </p>
+
+  <h2>Autoscaling</h2>
+  <p>
+    There are no servers to scale. S3 and CloudFront absorb extra
+    traffic on their own at the platform level, so the same setup
+    serves one visitor or one million without any manual change.
+  </p>
+
+  <footer>
+    IU &middot; Cloud Programming (DLBSEPCP01_E) &middot; Phase 2 demo
+  </footer>
 </body>
 </html>
