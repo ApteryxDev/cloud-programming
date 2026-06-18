@@ -1,4 +1,4 @@
-# cloud-programming — AWS static site
+# cloud-programming : AWS static site
 
 Portfolio submission for IU course **Cloud Programming (DLBSEPCP01_E)**. For Alp Ege Yalcin student n°42308653
 
@@ -25,7 +25,7 @@ When you deploy the template, AWS creates:
 - A **CloudFront distribution** in front of the bucket. CloudFront
   caches the files at ~400 edge locations around the world, terminates
   HTTPS for the visitor, and forwards cache misses to S3.
-- An **Origin Access Control** (OAC) — the modern AWS-recommended way
+- An **Origin Access Control** (OAC) : the modern AWS-recommended way
   to let CloudFront read from a private S3 bucket without ever making
   the bucket public.
 - A **bucket policy** that grants CloudFront the right to read objects
