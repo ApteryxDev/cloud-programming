@@ -1,93 +1,252 @@
-# cloud-programming : AWS static site
+<div align="center">
 
-Portfolio submission for IU course **Cloud Programming (DLBSEPCP01_E)**. For Alp Ege Yalcin student n°42308653
+# ☁️ Cloud Programming : Secure AWS Static Site
 
+**A fonctional, serverless static website delivered through AWS CloudFront and provisioned with CloudFormation.**
 
-This repository contains the Infrastructure as Code and the sample web
-page for **Phase 2** of the portfolio: a globally available static
-website hosted on AWS, defined entirely in a single CloudFormation
-template.
+[![AWS](https://img.shields.io/badge/AWS-Cloud_Platform-232F3E?logo=amazonaws&logoColor=white)](https://aws.amazon.com/)
+[![CloudFormation](https://img.shields.io/badge/IaC-AWS_CloudFormation-FF4F8B?logo=amazonaws&logoColor=white)](template.yaml)
+[![S3](https://img.shields.io/badge/Storage-Amazon_S3-569A31?logo=amazons3&logoColor=white)](https://aws.amazon.com/s3/)
+[![CloudFront](https://img.shields.io/badge/CDN-Amazon_CloudFront-8C4FFF?logo=amazonaws&logoColor=white)](https://aws.amazon.com/cloudfront/)
+[![HTTPS](https://img.shields.io/badge/Transport-HTTPS_only-success?logo=letsencrypt&logoColor=white)](#-security-by-design)
 
-## What's in this repo
+*IU International University of Applied Sciences · DLBSEPCP01_E · Cloud Programming*
 
-| File             | What it is                                                        |
-|------------------|-------------------------------------------------------------------|
-| `template.yaml`  | The full CloudFormation template (S3 + CloudFront + OAC + CW alarm) |
-| `index.html`     | A minimal "hello world" page that the site serves                 |
-| `README.md`      | This file                                                         |
+</div>
 
-## What gets deployed
+---
 
-When you deploy the template, AWS creates:
+## 🎯 Project objective
 
-- An **S3 bucket** that stores the site files. It is private — public
-  access is blocked.
-- A **CloudFront distribution** in front of the bucket. CloudFront
-  caches the files at ~400 edge locations around the world, terminates
-  HTTPS for the visitor, and forwards cache misses to S3.
-- An **Origin Access Control** (OAC) : the modern AWS-recommended way
-  to let CloudFront read from a private S3 bucket without ever making
-  the bucket public.
-- A **bucket policy** that grants CloudFront the right to read objects
-  through the OAC.
-- A **CloudWatch alarm** that fires if the CloudFront 5xx error rate
-  exceeds the configured threshold.
+This repository implements a **highly available, low-maintenance static website on AWS**. The infrastructure is declared in one CloudFormation template so the environment can be reviewed, reproduced, updated, and removed consistently.
 
+The solution addresses the portfolio brief through managed AWS services:
 
-## Architecture
+- **Global delivery:** CloudFront caches content close to visitors.
+- **Elastic scale:** S3 and CloudFront scale without server provisioning.
+- **Secure origin:** the S3 bucket remains private and is accessible only through CloudFront Origin Access Control.
+- **Repeatability:** the complete infrastructure is described as code.
+- **Observability:** a CloudWatch alarm monitors CloudFront 5xx errors.
 
-See the Phase 1 PDF for the full architecture diagram, or page 2 of
-the Phase 2 slide deck.
+> The course task asks for an understandable and replicable architecture, supported by Infrastructure as Code, that considers availability, worldwide latency, autoscaling, and security.
 
-## How to deploy
+## 🧭 Architecture at a glance
 
-You need an AWS account with the CLI configured (`aws configure`).
+```text
+                           HTTPS
+┌──────────────┐       ┌──────────────────────┐
+│ Global user  │ ────▶ │ Amazon CloudFront    │
+└──────────────┘       │ CDN · cache · TLS    │
+                       └──────────┬───────────┘
+                                  │ signed request (OAC)
+                                  ▼
+                       ┌──────────────────────┐
+                       │ Private Amazon S3    │
+                       │ index.html · versioned│
+                       └──────────────────────┘
+
+                       ┌──────────────────────┐
+                       │ Amazon CloudWatch    │
+                       │ 5xx error-rate alarm │
+                       └──────────────────────┘
+```
+
+### Request flow
+
+1. A visitor requests the website through the CloudFront URL.
+2. CloudFront redirects HTTP traffic to HTTPS and checks its cache.
+3. On a cache miss, CloudFront signs the origin request through **Origin Access Control (OAC)**.
+4. The private S3 bucket returns the requested object.
+5. CloudFront compresses, caches, and serves the response.
+
+## 🧩 AWS components
+
+| Component | Responsibility | Design rationale |
+|---|---|---|
+| **Amazon S3** | Stores `index.html` | Durable managed object storage with versioning and blocked public access |
+| **Amazon CloudFront** | Delivers and caches the website | Reduces latency, provides HTTPS, compression, IPv6, and managed scaling |
+| **Origin Access Control** | Authenticates CloudFront to S3 | Keeps the origin private and uses SigV4-signed requests |
+| **S3 bucket policy** | Restricts origin access | Grants `s3:GetObject` only to the deployed CloudFront distribution |
+| **Amazon CloudWatch** | Monitors availability signals | Raises an alarm when the CloudFront 5xx error rate exceeds the parameterized threshold |
+| **AWS CloudFormation** | Provisions the stack | Makes the solution readable, repeatable, and easy to tear down |
+
+## 🗂️ Repository structure
+
+```text
+cloud-programming/
+├── template.yaml   # CloudFormation: S3, CloudFront, OAC, policy and alarm
+├── index.html      # Sample static webpage
+└── README.md       # Architecture, deployment and operational guidance
+```
+
+## ✨ Infrastructure highlights
+
+| Area | Implementation |
+|---|---|
+| **Availability** | Managed S3 storage and CloudFront distribution; no single application server |
+| **Performance** | CloudFront caching, compression, HTTP/2, IPv6, and optimized cache policy |
+| **Security** | Private bucket, blocked public ACLs/policies, OAC, HTTPS redirect, TLS 1.2+ |
+| **Cost control** | Serverless static hosting and `PriceClass_100` for a lower-cost US/Europe edge footprint |
+| **Resilience** | S3 object versioning and custom CloudFront handling for 403/404 responses |
+| **Monitoring** | Parameterized CloudWatch alarm for the distribution's 5xx error rate |
+| **Maintainability** | One declarative YAML template with explicit parameters and outputs |
+
+## 🔐 Security by design
+
+The S3 bucket is **not a public website endpoint**. All public access controls are enabled, object ownership is enforced by the bucket owner, and CloudFront is the only permitted reader. The bucket policy validates the CloudFront distribution ARN before granting access.
+
+Viewer traffic is redirected to HTTPS, and the distribution enforces the `TLSv1.2_2021` minimum protocol policy.
+
+## 🚀 Deploy
+
+### Prerequisites
+
+- An AWS account
+- AWS CLI installed
+- Credentials configured with permission to create CloudFormation, S3, CloudFront, IAM-related resource policies, and CloudWatch resources
+
+Confirm the CLI session:
 
 ```bash
-# 1. Create the stack. Pick a globally unique BucketName.
+aws sts get-caller-identity
+```
+
+### 1. Validate the template
+
+```bash
+aws cloudformation validate-template \
+  --template-body file://template.yaml
+```
+
+### 2. Create or update the stack
+
+Choose a globally unique, DNS-compatible bucket name:
+
+```bash
+export STACK_NAME="cloud-programming-site"
+export BUCKET_NAME="cloud-programming-<your-unique-suffix>"
+
 aws cloudformation deploy \
-    --template-file template.yaml \
-    --stack-name cloud-programming-site \
-    --parameter-overrides BucketName=cloud-programming-<your-suffix>
-
-# 2. Upload the page.
-aws s3 cp index.html s3://cloud-programming-<your-suffix>/index.html
-
-# 3. Get the URL.
-aws cloudformation describe-stacks \
-    --stack-name cloud-programming-site \
-    --query 'Stacks[0].Outputs[?OutputKey==`SiteURL`].OutputValue' \
-    --output text
+  --template-file template.yaml \
+  --stack-name "$STACK_NAME" \
+  --parameter-overrides \
+      BucketName="$BUCKET_NAME" \
+      DefaultRootObject=index.html \
+      ErrorRateThreshold=5
 ```
 
-The first deploy takes about 15 minutes because CloudFront rolls the
-distribution out to its global edge network. Subsequent updates are
-much faster.
-
-## How to tear it down
+### 3. Upload the webpage
 
 ```bash
-# Empty the bucket first (CloudFormation refuses to delete non-empty buckets).
-aws s3 rm s3://cloud-programming-<your-suffix> --recursive
-
-# Then delete the stack.
-aws cloudformation delete-stack --stack-name cloud-programming-site
+aws s3 cp index.html "s3://$BUCKET_NAME/index.html" \
+  --content-type text/html
 ```
 
-## Notes for the tutor
+### 4. Retrieve the public URL
 
-- Single template, no external dependencies.
-- Uses Origin Access Control (the current AWS recommendation), not the
-  older Origin Access Identity.
-- CloudWatch 5xx alarm included as a small monitoring example.
-- TLS 1.2+ enforced, HTTPS-only via CloudFront.
-- Static site is fronted by CloudFront for global low latency; the
-  brief's "highly available", "low latency worldwide" and "autoscaling"
-  requirements are addressed by the managed services themselves.
+```bash
+SITE_URL=$(aws cloudformation describe-stacks \
+  --stack-name "$STACK_NAME" \
+  --query 'Stacks[0].Outputs[?OutputKey==`SiteURL`].OutputValue' \
+  --output text)
 
-## Course context
+echo "$SITE_URL"
+```
 
-Author: Alp Ege Yalcin
-Course: DLBSEPCP01_E – Cloud Programming Matriculation n°42308653
-Institution: IU International University of Applied Sciences
-# cloud-programming
+CloudFront distribution creation can take several minutes. A newly uploaded object may also require a brief propagation period.
+
+## ✅ Verify the deployment
+
+```bash
+curl -I "$SITE_URL"
+```
+
+Expected checks:
+
+- the URL uses `https://`;
+- the response is served through CloudFront;
+- the root path returns the uploaded page;
+- direct anonymous access to the S3 object is denied;
+- the CloudFormation stack exposes `SiteBucketName`, `DistributionId`, and `SiteURL` outputs.
+
+<details>
+<summary><strong>Optional: invalidate CloudFront after an update</strong></summary>
+
+```bash
+DISTRIBUTION_ID=$(aws cloudformation describe-stacks \
+  --stack-name "$STACK_NAME" \
+  --query 'Stacks[0].Outputs[?OutputKey==`DistributionId`].OutputValue' \
+  --output text)
+
+aws cloudfront create-invalidation \
+  --distribution-id "$DISTRIBUTION_ID" \
+  --paths "/*"
+```
+
+</details>
+
+## 🧹 Tear down
+
+S3 buckets must be empty before CloudFormation can delete them.
+
+```bash
+aws s3 rm "s3://$BUCKET_NAME" --recursive
+aws cloudformation delete-stack --stack-name "$STACK_NAME"
+aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME"
+```
+
+## ⚖️ Design decisions and trade-offs
+
+### Why S3 + CloudFront?
+
+A static site does not require an EC2 instance, load balancer, container platform, or custom autoscaling policy. S3 and CloudFront provide the required storage, delivery, and elasticity with less operational overhead.
+
+### Why Origin Access Control?
+
+OAC lets CloudFront sign requests to a private S3 origin. This avoids exposing the bucket publicly and supersedes the older Origin Access Identity approach for this architecture.
+
+### Why `PriceClass_100`?
+
+The template intentionally selects the lower-cost CloudFront price class, which uses edge locations in the United States, Canada, and Europe. This is a cost-conscious portfolio choice, but it is not the broadest possible global edge footprint. A production system targeting uniformly low latency worldwide could use a broader price class.
+
+### What would be added in production?
+
+- a custom domain in Route 53;
+- an ACM certificate for that domain;
+- AWS WAF rules;
+- access logging and dashboards;
+- deployment automation through CI/CD;
+- budget alarms and cost allocation tags;
+- a response-headers policy for browser security headers.
+
+## 📌 Portfolio alignment
+
+The repository supports the implementation and finalisation aspects of the course portfolio by providing:
+
+- a working Infrastructure-as-Code definition;
+- concise architecture and service rationale;
+- reproducible installation and removal instructions;
+- security, scalability, availability, cost, and monitoring considerations;
+- explicit reflection on trade-offs and possible improvements.
+
+## 🛠️ Built with
+
+<p align="center">
+  <img src="https://skillicons.dev/icons?i=aws" alt="AWS" height="44" />
+  &nbsp;&nbsp;
+  <img src="https://cdn.simpleicons.org/amazoncloudwatch/FF4F8B" alt="Amazon CloudWatch" height="42" />
+  &nbsp;&nbsp;
+  <img src="https://cdn.simpleicons.org/yaml/CB171E" alt="YAML" height="42" />
+  &nbsp;&nbsp;
+  <img src="https://cdn.simpleicons.org/html5/E34F26" alt="HTML5" height="42" />
+</p>
+
+---
+
+<div align="center">
+
+**Alp Ege Yalcin** · Matriculation No. **42308653**  
+DLBSEPCP01_E : Cloud Programming  
+IU International University of Applied Sciences
+
+</div>
